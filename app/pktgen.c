@@ -31,6 +31,7 @@
 #include "pktgen-gtpu.h"
 #include "pktgen-cfg.h"
 #include "pktgen-rate.h"
+#include "pktgen-volt.h"
 
 #include <pthread.h>
 #include <sched.h>
@@ -257,6 +258,54 @@ pktgen_tstamp_apply(port_info_t *info __rte_unused,
 	}
 }
 
+static __inline__ dbru_t *
+pktgen_dbru_pointer(port_info_t *info __rte_unused, 
+					struct rte_mbuf *m, int32_t seq_idx __rte_unused)
+{
+	dbru_t *dbru;
+	char *p;
+
+	p = rte_pktmbuf_mtod(m, char *);
+
+	//p += sizeof(struct pg_ether_hdr);
+
+	p += sizeof(struct rte_volt_us_ether_hdr);
+
+	/* Force pointer to be aligned correctly */
+	//p = RTE_PTR_ALIGN_CEIL(p, sizeof(uint64_t));
+
+	dbru = (dbru_t *)p;
+
+	return dbru;
+}
+
+static inline void
+pktgen_dbru_insert(port_info_t *info __rte_unused, struct rte_mbuf **mbufs) 
+					//, int cnt, int32_t seq_idx)
+{
+	// pkt_seq_t *pkt = &info->seq_pkt[seq_idx];
+	// struct pg_ether_hdr *eth = (struct pg_ether_hdr *)&pkt->hdr.eth;
+	// char *volt_us_ehter_hdr = (char *)&eth[1];	/* Point to l3 hdr location */
+	int i = 0;
+
+	dbru_t *dbru;
+	dbru = pktgen_dbru_pointer(info, mbufs[i], 0); //, seq_idx);
+	dbru->buff_occ	   = 0x555555; //(debug & 0xffffff);
+	dbru->crc		   = 0x55;
+
+	// for (i = 0; i < cnt; i++) {
+	// 	dbru_t *dbru;
+
+	// 	dbru = pktgen_dbru_pointer(info, mbufs[i], 0); //, seq_idx);
+
+	// 	dbru->buff_occ	   = (debug & 0xffffff); //0x555555;
+	// 	dbru->crc		   = 0x55;
+
+	// }
+
+}
+
+
 static inline void
 pktgen_do_tx_tap(port_info_t *info, struct rte_mbuf **mbufs, int cnt)
 {
@@ -289,6 +338,8 @@ pktgen_send_burst(port_info_t *info, uint16_t qid)
 	struct qstats_s *qstats;
 	uint32_t ret, cnt, tap, rnd, tstamp, i;
 	int32_t seq_idx;
+	uint64_t prev_tsc, diff_tsc, curr_tsc;
+	const uint64_t tx_volt_dbru_cycle = (rte_get_tsc_hz() + US_PER_S - 1) / US_PER_S * 125;
 
 	if ((cnt = mtab->len) == 0)
 		return;
@@ -312,14 +363,22 @@ pktgen_send_burst(port_info_t *info, uint16_t qid)
 	for (i = 0; i < cnt; i++)
 		qstats->txbytes += rte_pktmbuf_data_len(pkts[i]);
 
+	prev_tsc = 0;
 	/* Send all of the packets before we can exit this function */
 	while (cnt) {
-
 		if (rnd)
 			pktgen_rnd_bits_apply(info, pkts, cnt, NULL);
 
 		if (tstamp)
 			pktgen_tstamp_apply(info, pkts, cnt, seq_idx);
+
+		curr_tsc = rte_rdtsc();
+		diff_tsc = curr_tsc - prev_tsc;
+		/* insert a DBRu every 125µs */
+		if (diff_tsc >= tx_volt_dbru_cycle) {
+			pktgen_dbru_insert(info, pkts); //, cnt, diff_tsc); //seq_idx);
+			prev_tsc = curr_tsc;
+		}
 
 		ret = rte_eth_tx_burst(info->pid, qid, pkts, cnt);
 
@@ -1361,11 +1420,13 @@ pktgen_main_tx_loop(uint8_t lid)
 			continue;
 		}
 
+
 		/* Determine when is the next time to send packets */
 		if (curr_tsc >= tx_next_cycle) {
 			tx_next_cycle = curr_tsc + infos[0]->tx_cycles;
 
-			for (idx = 0; idx < txcnt; idx++)	/* Transmit packets */
+			/* Transmit packets */
+			for (idx = 0; idx < txcnt; idx++)
 				pktgen_main_transmit(infos[idx], qids[idx]);
 		} else if (curr_tsc >= tx_bond_cycle) {
 			tx_bond_cycle = curr_tsc + rte_get_timer_hz()/10;

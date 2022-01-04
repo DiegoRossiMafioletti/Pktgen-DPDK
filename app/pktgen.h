@@ -403,6 +403,11 @@ typedef struct {
 	uint16_t magic;
 } tstamp_t;
 
+typedef struct {
+    uint32_t buff_occ:24;
+    uint8_t crc;
+} dbru_t;
+
 #define TSTAMP_MAGIC   (('T' << 8) + 's')
 
 static __inline__ void
