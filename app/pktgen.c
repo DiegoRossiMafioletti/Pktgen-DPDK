@@ -259,8 +259,7 @@ pktgen_tstamp_apply(port_info_t *info __rte_unused,
 }
 
 static __inline__ dbru_t *
-pktgen_dbru_pointer(port_info_t *info __rte_unused, 
-					struct rte_mbuf *m, int32_t seq_idx __rte_unused)
+pktgen_dbru_pointer(struct rte_mbuf *m)
 {
 	dbru_t *dbru;
 	char *p;
@@ -280,29 +279,26 @@ pktgen_dbru_pointer(port_info_t *info __rte_unused,
 }
 
 static inline void
-pktgen_dbru_insert(port_info_t *info __rte_unused, struct rte_mbuf **mbufs) 
-					//, int cnt, int32_t seq_idx)
+pktgen_dbru_apply(port_info_t *info __rte_unused, struct rte_mbuf **mbufs, 
+				int cnt, int32_t seq_idx __rte_unused)
 {
-	// pkt_seq_t *pkt = &info->seq_pkt[seq_idx];
-	// struct pg_ether_hdr *eth = (struct pg_ether_hdr *)&pkt->hdr.eth;
-	// char *volt_us_ehter_hdr = (char *)&eth[1];	/* Point to l3 hdr location */
-	int i = 0;
+	uint64_t prev_tsc, diff_tsc, curr_tsc;
+	const uint64_t tx_volt_dbru_cycle = (rte_get_tsc_hz() + US_PER_S - 1) / US_PER_S * 125;	
+	int i;
 
-	dbru_t *dbru;
-	dbru = pktgen_dbru_pointer(info, mbufs[i], 0); //, seq_idx);
-	dbru->buff_occ	   = 0x555555; //(debug & 0xffffff);
-	dbru->crc		   = 0x55;
-
-	// for (i = 0; i < cnt; i++) {
-	// 	dbru_t *dbru;
-
-	// 	dbru = pktgen_dbru_pointer(info, mbufs[i], 0); //, seq_idx);
-
-	// 	dbru->buff_occ	   = (debug & 0xffffff); //0x555555;
-	// 	dbru->crc		   = 0x55;
-
-	// }
-
+	prev_tsc = 0;
+	for (i = 0; i < cnt; i++) {
+		curr_tsc = rte_rdtsc();
+		diff_tsc = curr_tsc - prev_tsc;
+		/* insert a DBRu every 125µs */
+		if (diff_tsc >= tx_volt_dbru_cycle) {
+			dbru_t *dbru;
+			dbru = pktgen_dbru_pointer(mbufs[i]);
+			dbru->buff_occ	   = 0x555555;
+			dbru->crc = 0x55;
+			prev_tsc = curr_tsc;
+		}
+	}
 }
 
 
@@ -336,10 +332,8 @@ pktgen_send_burst(port_info_t *info, uint16_t qid)
 	struct mbuf_table   *mtab = &info->q[qid].tx_mbufs;
 	struct rte_mbuf **pkts;
 	struct qstats_s *qstats;
-	uint32_t ret, cnt, tap, rnd, tstamp, i;
+	uint32_t ret, cnt, tap, rnd, tstamp, dbru, i;
 	int32_t seq_idx;
-	uint64_t prev_tsc, diff_tsc, curr_tsc;
-	const uint64_t tx_volt_dbru_cycle = (rte_get_tsc_hz() + US_PER_S - 1) / US_PER_S * 125;
 
 	if ((cnt = mtab->len) == 0)
 		return;
@@ -357,13 +351,13 @@ pktgen_send_burst(port_info_t *info, uint16_t qid)
 	tap = pktgen_tst_port_flags(info, PROCESS_TX_TAP_PKTS);
 	rnd = pktgen_tst_port_flags(info, SEND_RANDOM_PKTS);
 	tstamp = pktgen_tst_port_flags(info, (SEND_LATENCY_PKTS | SEND_RATE_PACKETS));
+	dbru = 1; // TODO: set a flag to enable/disable DBRus generation
 
 	qstats = &info->qstats[qid];
 	qstats->txpkts += cnt;
 	for (i = 0; i < cnt; i++)
 		qstats->txbytes += rte_pktmbuf_data_len(pkts[i]);
 
-	prev_tsc = 0;
 	/* Send all of the packets before we can exit this function */
 	while (cnt) {
 		if (rnd)
@@ -372,13 +366,8 @@ pktgen_send_burst(port_info_t *info, uint16_t qid)
 		if (tstamp)
 			pktgen_tstamp_apply(info, pkts, cnt, seq_idx);
 
-		curr_tsc = rte_rdtsc();
-		diff_tsc = curr_tsc - prev_tsc;
-		/* insert a DBRu every 125µs */
-		if (diff_tsc >= tx_volt_dbru_cycle) {
-			pktgen_dbru_insert(info, pkts); //, cnt, diff_tsc); //seq_idx);
-			prev_tsc = curr_tsc;
-		}
+		if (dbru)
+			pktgen_dbru_apply(info, pkts, cnt, seq_idx);
 
 		ret = rte_eth_tx_burst(info->pid, qid, pkts, cnt);
 

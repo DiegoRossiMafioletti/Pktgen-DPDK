@@ -27,7 +27,11 @@ struct rte_volt_us_ether_hdr {
 
 struct rte_volt_dbru_hdr {
     uint32_t buff_occ:24;
-    uint8_t crc;    
+    uint8_t crc;
+    uint64_t tsc1;
+    uint64_t tsc2;
+    uint64_t tsc3;
+    uint64_t tsc4;
 } __rte_packed;
 
 #ifdef __cplusplus
