@@ -164,8 +164,8 @@ lscpu_info_get(const char *lscpu_path)
 		}
 	}
 
- 	if (pclose(fp) == -1)
-        ERROR("pclose: %s", strerror(errno));
+ 	if (pclose(f) == -1)
+        printf("pclose: %s\n", strerror(errno));
 	
 	free(line);
 }
@@ -194,8 +194,8 @@ cpu_proc_info(const char *proc_path)
 		}
 	}
 
- 	if (pclose(fp) == -1)
-        ERROR("pclose: %s", strerror(errno));
+ 	if (pclose(f) == -1)
+        printf("pclose: %s\n", strerror(errno));
 
 	free(line);
 }
