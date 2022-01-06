@@ -532,7 +532,7 @@ do_command(const char *cmd, int (*display)(char *, int)) {
 		i = display(line, i);
 
 	if (f)
-		fclose(f);
+		pclose(f);
 	if (line)
 		free(line);
 
