@@ -504,6 +504,8 @@ main(int argc, char **argv)
 		pktgen_log_info("=== Display processing on lcore %d", rte_lcore_id());
 	}
 
+	// pktgen.curr_tsc = rte_rdtsc_precise();
+	// pktgen.prev_tsc = pktgen.curr_tsc;
 	/* launch per-lcore init on every lcore except initial and initial + 1 lcores */
 	ret = rte_eal_mp_remote_launch(pktgen_launch_one_lcore, NULL, PG_SKIP_MAIN);
 	if (ret != 0)

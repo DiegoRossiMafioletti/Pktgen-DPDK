@@ -163,7 +163,9 @@ pktgen_print_static_data(void)
                      ? "IPv4"
                      : (pkt->ethType == PG_ETHER_TYPE_IPv6)
                            ? "IPv6"
-                           : (pkt->ethType == PG_ETHER_TYPE_ARP) ? "ARP" : "Other",
+                           : (pkt->ethType == PG_ETHER_TYPE_ARP) ? "ARP"
+                                : (pkt->ethType == RTE_ETHER_TYPE_VOLT_US_FIRST) ? "vOLT" 
+                                    : "Other",
                  (pkt->ipProto == PG_IPPROTO_TCP)
                      ? "TCP"
                      : (pkt->ipProto == PG_IPPROTO_ICMP)

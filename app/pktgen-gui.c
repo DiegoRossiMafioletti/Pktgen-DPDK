@@ -209,6 +209,7 @@ update_port_static_info(unsigned int pid)
 			        (pkt->ethType == PG_ETHER_TYPE_IPv4) ? "IPv4" :
 			        (pkt->ethType == PG_ETHER_TYPE_IPv6) ? "IPv6" :
 			        (pkt->ethType == PG_ETHER_TYPE_ARP) ? "ARP" :
+					(pkt->ethType == RTE_ETHER_TYPE_VOLT_US_FIRST) ? "vOLT" :
 			        (pkt->ipProto == PG_IPPROTO_TCP) ? "TCP" :
 			        (pkt->ipProto == PG_IPPROTO_ICMP) ? "ICMP" : "UDP");
 			break;

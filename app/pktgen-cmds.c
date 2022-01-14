@@ -168,7 +168,9 @@ pktgen_script_save(char *path)
 			(pkt->ethType == PG_ETHER_TYPE_IPv4) ? "ipv4" :
 			(pkt->ethType == PG_ETHER_TYPE_IPv6) ? "ipv6" :
 			(pkt->ethType == PG_ETHER_TYPE_VLAN) ? "vlan" :
-			(pkt->ethType == PG_ETHER_TYPE_ARP) ? "arp" : "unknown");
+			(pkt->ethType == PG_ETHER_TYPE_ARP) ? "arp" : 
+			(pkt->ethType == RTE_ETHER_TYPE_VOLT_US_FIRST) ? "volt" : 
+			"unknown");
 		fprintf(fd, "set %d proto %s\n", i,
 			(pkt->ipProto == PG_IPPROTO_TCP) ? "tcp" :
 			(pkt->ipProto == PG_IPPROTO_ICMP) ? "icmp" : "udp");
@@ -396,8 +398,8 @@ pktgen_script_save(char *path)
 				pkt->dport,
 				(pkt->ethType == PG_ETHER_TYPE_IPv4) ? "ipv4" :
 				(pkt->ethType == PG_ETHER_TYPE_IPv6) ? "ipv6" :
-				(pkt->ethType ==
-				 PG_ETHER_TYPE_VLAN) ? "vlan" : "Other",
+				(pkt->ethType == PG_ETHER_TYPE_VLAN) ? "vlan" : 
+				(pkt->ethType == RTE_ETHER_TYPE_VOLT_US_FIRST) ? "volt" : "Other",
 				(pkt->ipProto == PG_IPPROTO_TCP) ? "tcp" :
 				(pkt->ipProto ==
 				 PG_IPPROTO_ICMP) ? "icmp" : "udp",
@@ -544,7 +546,8 @@ pktgen_lua_save(char *path)
 			(pkt->ethType == PG_ETHER_TYPE_IPv4) ? "ipv4" :
 			(pkt->ethType == PG_ETHER_TYPE_IPv6) ? "ipv6" :
 			(pkt->ethType == PG_ETHER_TYPE_VLAN) ? "vlan" :
-			(pkt->ethType == PG_ETHER_TYPE_ARP) ? "arp" : "unknown");
+			(pkt->ethType == PG_ETHER_TYPE_ARP) ? "arp" : 
+			(pkt->ethType == RTE_ETHER_TYPE_VOLT_US_FIRST) ? "volt" : "unknown");
 		fprintf(fd, "pktgen.set_proto('%d', '%s');\n", i,
 			(pkt->ipProto == PG_IPPROTO_TCP) ? "tcp" :
 			(pkt->ipProto == PG_IPPROTO_ICMP) ? "icmp" : "udp");
@@ -767,11 +770,10 @@ pktgen_lua_save(char *path)
 					pkt->dport,
 					(pkt->ethType == PG_ETHER_TYPE_IPv4) ? "ipv4" :
 					(pkt->ethType == PG_ETHER_TYPE_IPv6) ? "ipv6" :
-					(pkt->ethType ==
-					 PG_ETHER_TYPE_VLAN) ? "vlan" : "Other",
+					(pkt->ethType == PG_ETHER_TYPE_VLAN) ? "vlan" : 
+					(pkt->ethType == RTE_ETHER_TYPE_VOLT_US_FIRST) ? "volt": "Other",
 					(pkt->ipProto == PG_IPPROTO_TCP) ? "tcp" :
-					(pkt->ipProto ==
-					 PG_IPPROTO_ICMP) ? "icmp" : "udp",
+					(pkt->ipProto == PG_IPPROTO_ICMP) ? "icmp" : "udp",
 					pkt->vlanid,
 					pkt->pktSize + PG_ETHER_CRC_LEN,
 					pkt->gtpu_teid);
@@ -804,7 +806,8 @@ pktgen_lua_save(char *path)
 				fprintf(fd, "  ['ethType'] = '%s',\n",
 					(pkt->ethType == PG_ETHER_TYPE_IPv4) ? "ipv4" :
 					(pkt->ethType == PG_ETHER_TYPE_IPv6) ? "ipv6" :
-					(pkt->ethType == PG_ETHER_TYPE_VLAN) ? "vlan" : "Other");
+					(pkt->ethType == PG_ETHER_TYPE_VLAN) ? "vlan" : 
+					(pkt->ethType == RTE_ETHER_TYPE_VOLT_US_FIRST) ? "volt" : "Other");
 				fprintf(fd, "  ['ipProto'] = '%s',\n",
 					(pkt->ipProto == PG_IPPROTO_TCP) ? "tcp" :
 					(pkt->ipProto == PG_IPPROTO_ICMP) ? "icmp" : "udp");
@@ -1590,6 +1593,9 @@ single_set_proto(port_info_t *info, char *type)
 	if (type[0] == 'i')
 		info->seq_pkt[SINGLE_PKT].ethType = PG_ETHER_TYPE_IPv4;
 
+	if (type[0] == 'v')
+		info->seq_pkt[SINGLE_PKT].ethType = RTE_ETHER_TYPE_VOLT_US_FIRST;
+
 	pktgen_packet_ctor(info, SINGLE_PKT, -1);
 	pktgen_set_tx_update(info);
 }
@@ -1617,6 +1623,9 @@ rate_set_proto(port_info_t *info, char *type)
 	/* ICMP only works on IPv4 packets. */
 	if (type[0] == 'i')
 		info->seq_pkt[RATE_PKT].ethType = PG_ETHER_TYPE_IPv4;
+
+	if (type[0] == 'v')
+		info->seq_pkt[SINGLE_PKT].ethType = RTE_ETHER_TYPE_VOLT_US_FIRST;
 
 	pktgen_packet_ctor(info, RATE_PKT, -1);
 	pktgen_set_tx_update(info);
@@ -1646,6 +1655,9 @@ range_set_proto(port_info_t *info, const char *type)
 	/* ICMP only works on IPv4 packets. */
 	if (type[0] == 'i')
 		info->seq_pkt[RANGE_PKT].ethType = PG_ETHER_TYPE_IPv4;
+
+	if (type[0] == 'v')
+		info->seq_pkt[SINGLE_PKT].ethType = RTE_ETHER_TYPE_VOLT_US_FIRST;
 }
 
 /**************************************************************************//**
@@ -2031,6 +2043,7 @@ range_set_pkt_type(port_info_t *info, const char *type)
 	info->seq_pkt[RANGE_PKT].ethType = (type[0] == 'a') ? PG_ETHER_TYPE_ARP :
 		(type[3] == '4') ? PG_ETHER_TYPE_IPv4 :
 		(type[3] == '6') ? PG_ETHER_TYPE_IPv6 :
+		(type[0] == 'v') ? RTE_ETHER_TYPE_VOLT_US_FIRST :
 		/* TODO print error: unknown type */ PG_ETHER_TYPE_IPv4;
 }
 
@@ -2058,6 +2071,7 @@ single_set_pkt_type(port_info_t *info, const char *type)
 		(type[3] == '6') ? PG_ETHER_TYPE_IPv6 :
 		(type[2] == '4') ? PG_ETHER_TYPE_IPv4 :
 		(type[2] == '6') ? PG_ETHER_TYPE_IPv6 :
+		(type[0] == 'v') ? RTE_ETHER_TYPE_VOLT_US_FIRST :
 		/* TODO print error: unknown type */ PG_ETHER_TYPE_IPv4;
 
 	if ((ethtype == PG_ETHER_TYPE_IPv6) && (pkt->ethType == PG_ETHER_TYPE_IPv4)) {
@@ -2067,6 +2081,9 @@ single_set_pkt_type(port_info_t *info, const char *type)
 	if ((ethtype == PG_ETHER_TYPE_IPv4) && (pkt->ethType == PG_ETHER_TYPE_IPv6)) {
 		if (pkt->pktSize < MIN_v6_PKT_SIZE)
 			pkt->pktSize = MIN_v6_PKT_SIZE + (pkt->pktSize - MIN_PKT_SIZE);
+	}
+	if ((ethtype == RTE_ETHER_TYPE_VOLT_US_FIRST) && (pkt->ethType == RTE_ETHER_TYPE_VOLT_US_FIRST)) {
+		pkt->pktSize = 9000;
 	}
 
 	pktgen_packet_ctor(info, SINGLE_PKT, -1);
@@ -2097,6 +2114,7 @@ rate_set_pkt_type(port_info_t *info, const char *type)
 		(type[3] == '6') ? PG_ETHER_TYPE_IPv6 :
 		(type[2] == '4') ? PG_ETHER_TYPE_IPv4 :
 		(type[2] == '6') ? PG_ETHER_TYPE_IPv6 :
+		(type[0] == 'v') ? RTE_ETHER_TYPE_VOLT_US_FIRST :
 		/* TODO print error: unknown type */ PG_ETHER_TYPE_IPv4;
 
 	if ((ethtype == PG_ETHER_TYPE_IPv6) && (pkt->ethType == PG_ETHER_TYPE_IPv4)) {
@@ -2507,12 +2525,15 @@ pktgen_port_defaults(uint32_t pid, uint8_t seq)
 	pkt_seq_t *pkt = &info->seq_pkt[seq];
 	port_info_t *dst_info;
 
-	pkt->pktSize            = MIN_PKT_SIZE;
+	// pkt->pktSize            = MIN_PKT_SIZE;
+	pkt->pktSize            = RTE_ETHER_TYPE_VOLT_US_FIRST;
 	pkt->sport              = DEFAULT_SRC_PORT;
 	pkt->dport              = DEFAULT_DST_PORT;
 	pkt->ttl                = DEFAULT_TTL;
-	pkt->ipProto            = PG_IPPROTO_TCP;
-	pkt->ethType            = PG_ETHER_TYPE_IPv4;
+	// pkt->ipProto            = PG_IPPROTO_TCP;
+	pkt->ipProto            = PG_IPPROTO_UDP;
+	// pkt->ethType            = PG_ETHER_TYPE_IPv4;
+	pkt->ethType			= RTE_ETHER_TYPE_VOLT_US_FIRST;
 	pkt->vlanid             = DEFAULT_VLAN_ID;
 	pkt->cos            	= DEFAULT_COS;
 	pkt->tos            	= DEFAULT_TOS;
@@ -3914,7 +3935,7 @@ pktgen_set_seq(port_info_t *info, uint32_t seqnum,
 	/* Force the IP protocol to IPv4 if this is a ICMP packet. */
 	if (proto == 'i')
 		type = '4';
-	pkt->ethType        = (type == '6') ? PG_ETHER_TYPE_IPv6 : PG_ETHER_TYPE_IPv4;
+	pkt->ethType        = (type == '6') ? PG_ETHER_TYPE_IPv6 : (type == 'v') ? RTE_ETHER_TYPE_VOLT_US_FIRST : PG_ETHER_TYPE_IPv4;
 	pkt->vlanid         = vlanid;
 	pkt->gtpu_teid      = gtpu_teid;
 	pktgen_packet_ctor(info, seqnum, -1);
