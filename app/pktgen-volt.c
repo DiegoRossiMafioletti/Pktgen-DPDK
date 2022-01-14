@@ -28,24 +28,17 @@
  */
 
 void
-pktgen_volt_ctor(pkt_seq_t *pkt, void *hdr)
+pktgen_volt_hdr_ctor(pkt_seq_t *pkt __rte_unused, void *hdr)
 {
-	struct  *volt = hdr;
-	uint16_t tlen;
-}
+	struct rte_volt_us_ether_hdr *volt = hdr;
+	uint8_t i;
 
-void
-pktgen_packet_insert_dbru(port_info_t *info, uint16_t qid) 
-{
-	pkt_seq_t *pkt = &info->seq_pkt[seq_idx];
-	struct rte_volt_us_ether_hdr *volt_us = (struct rte_volt_us_ether_hdr *)&pkt->hdr.eth;// or .volt_us: find who is this "pkt"
-	struct rte_volt_dbru_hdr *dbru;
-	uint32_t flags;
-
-	flags = rte_atomic32_read(&info->port_flags);
-	char *l3_hdr = (char *)&volt_us[1];	/* Point to l3 hdr location */
-
-
-	volt_us
-
+	// volt->out_chunck_len = htons(pkt->ethType);
+	volt->burst_id = 0;
+	volt->burst_seq = 1;
+	volt->flags = 0x02;
+	volt->padding = 0x00000000;
+	for (i = 0; i < 48; i++) {
+		volt->ploamu[i] = 0x44;
+	}
 }

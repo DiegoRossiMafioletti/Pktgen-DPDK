@@ -346,6 +346,15 @@ typedef struct qinqHdr_s {
  * Sequence Number: for packet ordering purposes
  */
 
+
+typedef struct volt_ether_us_s {
+    uint16_t burst_id;
+    uint8_t burst_seq;
+    uint8_t flags;                  // 0x01 == last chunck | 0x02 == first chunck
+    uint32_t padding;               // extra padding (4 bytes * 0x00)
+    uint8_t ploamu[48];             // 8.2.1.4 Upstream PLOAM (PLOAMu) field (0 or 48 bytes - OPTIONAL * 0x44)
+} __attribute__ ((__packed__)) volt_ether_us_t;
+
 /* GRE header */
 typedef struct greHdr_s {
 	uint8_t reserved0_0 : 4;/**< must be 0 */
@@ -404,6 +413,7 @@ typedef union {
 typedef struct pkt_hdr_s {
 	struct pg_ether_hdr eth;	/**< Ethernet header */
 	union {
+		volt_ether_us_t volt;		/**< Volt US header */
 		struct pg_ipv4_hdr ipv4;		/**< IPv4 Header */
 		struct pg_ipv6_hdr ipv6;		/**< IPv6 Header */
 		tcpip_t tip;		/**< TCP + IPv4 Headers */
