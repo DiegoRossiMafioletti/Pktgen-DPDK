@@ -93,6 +93,8 @@
 #include "pktgen-rate.h"
 #include "pktgen-seq.h"
 #include "pktgen-version.h"
+#include "pktgen-volt.h"
+
 
 #include <cli.h>
 
@@ -296,6 +298,10 @@ typedef struct pktgen_s {
 	uint16_t portNum;	/**< Current Port number */
 	uint16_t port_cnt;	/**< Number of ports used in total */
 	uint64_t hz;		/**< Number of events per seconds */
+
+	uint64_t curr_tsc;	/* Current TSC */
+	uint64_t prev_tsc;
+
 
 	int (*callout)(void *callout_arg);
 	void *callout_arg;

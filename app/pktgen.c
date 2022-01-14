@@ -266,12 +266,11 @@ pktgen_dbru_pointer(struct rte_mbuf *m)
 
 	p = rte_pktmbuf_mtod(m, char *);
 
-	//p += sizeof(struct pg_ether_hdr);
+	p += sizeof(struct pg_ether_hdr);
 
 	p += sizeof(struct rte_volt_us_ether_hdr);
 
-	/* Force pointer to be aligned correctly */
-	//p = RTE_PTR_ALIGN_CEIL(p, sizeof(uint64_t));
+	RTE_PTR_ALIGN_CEIL(p, sizeof(uint64_t));
 
 	dbru = (dbru_t *)p;
 
@@ -279,25 +278,32 @@ pktgen_dbru_pointer(struct rte_mbuf *m)
 }
 
 static inline void
-pktgen_dbru_apply(port_info_t *info __rte_unused, struct rte_mbuf **mbufs, 
-				int cnt, int32_t seq_idx __rte_unused)
+pktgen_dbru_apply(struct rte_mbuf **mbufs, int cnt)
 {
-	uint64_t prev_tsc, diff_tsc, curr_tsc;
-	const uint64_t tx_volt_dbru_cycle = (rte_get_tsc_hz() + US_PER_S - 1) / US_PER_S * 125;	
+	uint64_t diff_tsc;
+	/* "generic formula" to convert µs to cycles */
+	const uint64_t tx_volt_dbru_cycle = (rte_get_tsc_hz() + US_PER_S - 1) / US_PER_S * 125;
+	// const uint64_t tx_volt_dbru_cycle = (rte_get_tsc_hz() + US_PER_S - 1) / US_PER_S / 2;
 	int i;
 
-	prev_tsc = 0;
 	for (i = 0; i < cnt; i++) {
-		curr_tsc = rte_rdtsc();
-		diff_tsc = curr_tsc - prev_tsc;
-		/* insert a DBRu every 125µs */
-		if (diff_tsc >= tx_volt_dbru_cycle) {
+		pktgen.curr_tsc = rte_rdtsc();
+		diff_tsc = pktgen.curr_tsc - pktgen.prev_tsc;
+		/* insert a DBRu every ~125µs (155,520 bytes = 38,880 words =~ 17.28 pkts (9000 mtu)) */
+		if (unlikely(diff_tsc > tx_volt_dbru_cycle)) {
 			dbru_t *dbru;
 			dbru = pktgen_dbru_pointer(mbufs[i]);
-			dbru->buff_occ	   = 0x555555;
+			dbru->buff_occ = 0x555555;
 			dbru->crc = 0x55;
-			prev_tsc = curr_tsc;
+			// dbru->tsc1 = htobe64(diff_tsc);
+			// dbru->tsc2 = htobe64(pktgen.curr_tsc);
+			// dbru->tsc3 = htobe64(pktgen.prev_tsc);
+			// dbru->tsc4 = htobe64(tx_volt_dbru_cycle);
+
+			// pktgen.prev_tsc = pktgen.curr_tsc;
+			pktgen.prev_tsc = pktgen.curr_tsc;
 		}
+    	// pktgen_log_info("curr_tsc, prev_tsc, dbru_cycle: %llu, %llu, %llu", pktgen.curr_tsc, pktgen.prev_tsc, tx_volt_dbru_cycle);
 	}
 }
 
@@ -367,7 +373,7 @@ pktgen_send_burst(port_info_t *info, uint16_t qid)
 			pktgen_tstamp_apply(info, pkts, cnt, seq_idx);
 
 		if (dbru)
-			pktgen_dbru_apply(info, pkts, cnt, seq_idx);
+			pktgen_dbru_apply(pkts, cnt);
 
 		ret = rte_eth_tx_burst(info->pid, qid, pkts, cnt);
 
@@ -657,8 +663,11 @@ pktgen_packet_ctor(port_info_t *info, int32_t seq_idx, int32_t type)
 		pg_ether_addr_copy(&pkt->eth_dst_addr,
 		                (struct pg_ether_addr *)&arp->arp_data.arp_tha);
 		*((uint32_t *)&arp->arp_data.arp_tip) = htonl(pkt->ip_dst_addr.addr.ipv4.s_addr);
-	} else
+	} else if (pkt->ethType == RTE_ETHER_TYPE_VOLT_US_FIRST || pkt->ethType == RTE_ETHER_TYPE_VOLT_US_LAST) {
+		pktgen_volt_hdr_ctor(pkt, l3_hdr);
+	} else {
 		pktgen_log_error("Unknown EtherType 0x%04x", pkt->ethType);
+	}
 }
 
 /**************************************************************************//**
@@ -1397,6 +1406,7 @@ pktgen_main_tx_loop(uint8_t lid)
 	}
 
 	idx = 0;
+
 	while (pg_lcore_is_running(pktgen.l2p, lid)) {
 		curr_tsc = rte_get_tsc_cycles();
 
