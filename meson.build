@@ -20,7 +20,7 @@ cc = meson.get_compiler('c')
 add_project_arguments('-march=native', language: 'c')
 
 if get_option('enable-avx2') and cc.has_argument('-mavx2')
-	add_project_arguments('-mavx2', language: 'c')
+	add_project_arguments('-mavx', language: 'c')
 endif
 add_project_arguments('-DALLOW_EXPERIMENTAL_API', language: 'c')
 add_project_arguments('-D_GNU_SOURCE', language: 'c')
