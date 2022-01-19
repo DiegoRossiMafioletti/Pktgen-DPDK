@@ -219,11 +219,22 @@ pktgen_tstamp_pointer(port_info_t *info, struct rte_mbuf *m, int32_t seq_idx)
 
 	p += sizeof(struct pg_ether_hdr);
 
-	p += (info->seq_pkt[seq_idx].ethType == PG_ETHER_TYPE_IPv4) ?
-	     sizeof(struct pg_ipv4_hdr) : sizeof(struct pg_ipv6_hdr);
+	if (info->seq_pkt[seq_idx].ethType == RTE_ETHER_TYPE_VOLT_US_FIRST || 
+		info->seq_pkt[seq_idx].ethType == RTE_ETHER_TYPE_VOLT_US_LAST) {
+		p += sizeof(struct rte_volt_us_ether_hdr);
+		p += sizeof(struct rte_volt_dbru_hdr);
+		p += sizeof(struct rte_volt_xgem_h);
+		p += sizeof(struct rte_volt_ethernet_h);
+		p += sizeof(struct pg_vlan_hdr);
+		p += sizeof(struct pg_ipv4_hdr);
+		p += sizeof(struct pg_udp_hdr);
+	} else {
+		p += (info->seq_pkt[seq_idx].ethType == PG_ETHER_TYPE_IPv4) ?
+			sizeof(struct pg_ipv4_hdr) : sizeof(struct pg_ipv6_hdr);
 
-	p += (info->seq_pkt[seq_idx].ipProto == PG_IPPROTO_UDP) ?
-	     sizeof(struct pg_udp_hdr) : sizeof(struct pg_tcp_hdr);
+		p += (info->seq_pkt[seq_idx].ipProto == PG_IPPROTO_UDP) ?
+			sizeof(struct pg_udp_hdr) : sizeof(struct pg_tcp_hdr);
+	}
 
 	/* Force pointer to be aligned correctly */
 	p = RTE_PTR_ALIGN_CEIL(p, sizeof(uint64_t));
@@ -372,9 +383,9 @@ pktgen_send_burst(port_info_t *info, uint16_t qid)
 		if (tstamp)
 			pktgen_tstamp_apply(info, pkts, cnt, seq_idx);
 
-		if (dbru)
+		if (dbru) {
 			pktgen_dbru_apply(pkts, cnt);
-
+		}
 		ret = rte_eth_tx_burst(info->pid, qid, pkts, cnt);
 
 		if (tap)
@@ -952,6 +963,12 @@ pktgen_setup_cb(struct rte_mempool *mp,
 
 	if (idx == RANGE_PKT)
 		pktgen_range_ctor(&info->range, pkt);
+
+	if (pkt->ethType == RTE_ETHER_TYPE_VOLT_US_FIRST || RTE_ETHER_TYPE_VOLT_US_LAST) {
+		pkt->ethType = (pktgen.counter & 1 ? RTE_ETHER_TYPE_VOLT_US_LAST :  RTE_ETHER_TYPE_VOLT_US_FIRST);
+		pkt->pktSize = RTE_PTKSIZE_NORM(pkt->ethType);
+		pktgen.counter++;
+	}
 
 	pktgen_packet_ctor(info, idx, -1);
 

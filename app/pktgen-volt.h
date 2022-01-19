@@ -17,6 +17,8 @@ extern "C" {
 #define RTE_ETHER_TYPE_VOLT_US_FIRST     0x1f44
 #define RTE_ETHER_TYPE_VOLT_US_LAST      0x1b94
 
+#define RTE_PTKSIZE_NORM(_size) (_size+14)     // adds 14 bytes to the packet size
+
 struct rte_volt_us_ether_hdr {
     // outer ethernet: integrated with the standard Ethernet header
     // uint64_t out_dstAddr:48;
@@ -98,9 +100,9 @@ struct rte_volt_bwmap_h {
 
 // custom ethernet header (22 bytes)
 struct rte_volt_ethernet_h {
-    uint32_t padding;
     uint64_t dstaddr:48;
     uint64_t srcaddr:48;
+    uint32_t vlan_tag;
     uint16_t ether_type;
 } __rte_packed;
 
