@@ -399,10 +399,10 @@ pktgen_script_save(char *path)
 				(pkt->ethType == PG_ETHER_TYPE_IPv4) ? "ipv4" :
 				(pkt->ethType == PG_ETHER_TYPE_IPv6) ? "ipv6" :
 				(pkt->ethType == PG_ETHER_TYPE_VLAN) ? "vlan" : 
-				(pkt->ethType == RTE_ETHER_TYPE_VOLT_US_FIRST) ? "volt" : "Other",
+				(pkt->ethType == RTE_ETHER_TYPE_VOLT_US_FIRST) ? "vOLT" : 
+				(pkt->ethType == RTE_ETHER_TYPE_VOLT_US_LAST) ? "Other",
 				(pkt->ipProto == PG_IPPROTO_TCP) ? "tcp" :
-				(pkt->ipProto ==
-				 PG_IPPROTO_ICMP) ? "icmp" : "udp",
+				(pkt->ipProto == PG_IPPROTO_ICMP) ? "icmp" : "udp",
 				pkt->vlanid,
 				pkt->pktSize + PG_ETHER_CRC_LEN,
 				pkt->gtpu_teid);
@@ -771,7 +771,8 @@ pktgen_lua_save(char *path)
 					(pkt->ethType == PG_ETHER_TYPE_IPv4) ? "ipv4" :
 					(pkt->ethType == PG_ETHER_TYPE_IPv6) ? "ipv6" :
 					(pkt->ethType == PG_ETHER_TYPE_VLAN) ? "vlan" : 
-					(pkt->ethType == RTE_ETHER_TYPE_VOLT_US_FIRST) ? "volt": "Other",
+					(pkt->ethType == RTE_ETHER_TYPE_VOLT_US_FIRST) ? "vOLT":
+					(pkt->ethType == RTE_ETHER_TYPE_VOLT_US_LAST) ? "vOLT": "Other",
 					(pkt->ipProto == PG_IPPROTO_TCP) ? "tcp" :
 					(pkt->ipProto == PG_IPPROTO_ICMP) ? "icmp" : "udp",
 					pkt->vlanid,
@@ -807,7 +808,8 @@ pktgen_lua_save(char *path)
 					(pkt->ethType == PG_ETHER_TYPE_IPv4) ? "ipv4" :
 					(pkt->ethType == PG_ETHER_TYPE_IPv6) ? "ipv6" :
 					(pkt->ethType == PG_ETHER_TYPE_VLAN) ? "vlan" : 
-					(pkt->ethType == RTE_ETHER_TYPE_VOLT_US_FIRST) ? "volt" : "Other");
+					(pkt->ethType == RTE_ETHER_TYPE_VOLT_US_FIRST) ? "vOLT" : 
+					(pkt->ethType == RTE_ETHER_TYPE_VOLT_US_LAST) ? "vOLT" : "Other");
 				fprintf(fd, "  ['ipProto'] = '%s',\n",
 					(pkt->ipProto == PG_IPPROTO_TCP) ? "tcp" :
 					(pkt->ipProto == PG_IPPROTO_ICMP) ? "icmp" : "udp");
@@ -1537,6 +1539,7 @@ pktgen_stop_transmitting(port_info_t *info)
 
 	if (pktgen_tst_port_flags(info, SENDING_PACKETS)) {
 		pktgen_clr_port_flags(info, (SENDING_PACKETS | SEND_FOREVER));
+		pktgen.counter = 0;		// reset the debug counter
 		for (q = 0; q < get_port_txcnt(pktgen.l2p, info->pid); q++)
 			pktgen_set_q_flags(info, q, DO_TX_FLUSH);
 	}
@@ -2526,7 +2529,7 @@ pktgen_port_defaults(uint32_t pid, uint8_t seq)
 	port_info_t *dst_info;
 
 	// pkt->pktSize            = MIN_PKT_SIZE;
-	pkt->pktSize            = RTE_ETHER_TYPE_VOLT_US_FIRST;
+	pkt->pktSize            = RTE_ETHER_TYPE_VOLT_US_FIRST + 14;
 	pkt->sport              = DEFAULT_SRC_PORT;
 	pkt->dport              = DEFAULT_DST_PORT;
 	pkt->ttl                = DEFAULT_TTL;
@@ -2541,7 +2544,8 @@ pktgen_port_defaults(uint32_t pid, uint8_t seq)
 	rte_atomic64_set(&info->transmit_count, DEFAULT_TX_COUNT);
 	rte_atomic64_init(&info->current_tx_count);
 	info->tx_rate           = DEFAULT_TX_RATE;
-	info->tx_burst          = DEFAULT_PKT_BURST;
+	// info->tx_burst          = DEFAULT_PKT_BURST;
+	info->tx_burst          = 1;
 	info->vlanid            = DEFAULT_VLAN_ID;
 	info->cos            	= DEFAULT_COS;
 	info->tos            	= DEFAULT_TOS;
