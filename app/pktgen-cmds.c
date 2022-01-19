@@ -400,7 +400,7 @@ pktgen_script_save(char *path)
 				(pkt->ethType == PG_ETHER_TYPE_IPv6) ? "ipv6" :
 				(pkt->ethType == PG_ETHER_TYPE_VLAN) ? "vlan" : 
 				(pkt->ethType == RTE_ETHER_TYPE_VOLT_US_FIRST) ? "vOLT" : 
-				(pkt->ethType == RTE_ETHER_TYPE_VOLT_US_LAST) ? "Other",
+				(pkt->ethType == RTE_ETHER_TYPE_VOLT_US_LAST) ? "vOLT" : "Other",
 				(pkt->ipProto == PG_IPPROTO_TCP) ? "tcp" :
 				(pkt->ipProto == PG_IPPROTO_ICMP) ? "icmp" : "udp",
 				pkt->vlanid,
