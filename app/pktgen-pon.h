@@ -5,8 +5,8 @@
  */
 /* Created 2021 by Diego Rossi Mafioletti @ gmail.com */
 
-#ifndef _PKTGEN_VOLT_H_
-#define _PKTGEN_VOLT_H_
+#ifndef _PKTGEN_PON_H_
+#define _PKTGEN_PON_H_
 
 #include "pktgen-seq.h"
 
@@ -14,12 +14,12 @@
 extern "C" {
 #endif
 
-#define RTE_ETHER_TYPE_VOLT_US_FIRST     0x1f44
-#define RTE_ETHER_TYPE_VOLT_US_LAST      0x1b94
+#define RTE_ETHER_TYPE_PON_US_FIRST     0x1f44
+#define RTE_ETHER_TYPE_PON_US_LAST      0x1b94
 
-#define RTE_PTKSIZE_NORM(_size) (_size+14)     // adds 14 bytes to the packet size
+#define RTE_PON_PTKSIZE_NORM(_size) (_size+14)     // adds 14 bytes to the packet size
 
-struct rte_volt_us_ether_hdr {
+struct rte_pon_us_ether_hdr {
     // outer ethernet: integrated with the standard Ethernet header
     // uint64_t out_dstAddr:48;
     // uint64_t out_srcAddr:48;
@@ -34,12 +34,12 @@ struct rte_volt_us_ether_hdr {
     uint8_t ploamu[48];             // 8.2.1.4 Upstream PLOAM (PLOAMu) field (0 or 48 bytes - OPTIONAL * 0x44)
 } __rte_packed;
 
-struct rte_volt_dbru_hdr {
+struct rte_pon_dbru_hdr {
     uint32_t buff_occ:24;
     uint8_t crc;
 } __rte_packed;
 
-struct rte_volt_xgem_h {
+struct rte_pon_xgem_h {
     uint16_t pli:14;            /* The length L, in bytes, of an SDU or an SDU fragment in the XGEM payload following the 
                                 XGEM header. The 14-bit field allows to represent an integer from 0 to 16383. 
                                 */
@@ -59,7 +59,7 @@ struct rte_volt_xgem_h {
 } __rte_packed;
 
 // HLend is a 4-byte structure that controls the size of the variable length partitions within the XGTC header
-struct rte_volt_hlend_h {
+struct rte_pon_hlend_h {
     uint16_t bwmap_length:11;   // contains an unsigned integer, N, indicating the number of allocation structures in the BWmap partition.
     uint8_t ploam_count;        // contains an unsigned integer, P, indicating the number of PLOAM messages in the PLOAMd partition.
     uint16_t hec:13;            /* an error detection and correction field for the HLend structure, which is a combination of a truncated 
@@ -69,7 +69,7 @@ struct rte_volt_hlend_h {
 } __rte_packed;
 
 
-struct rte_volt_bwmap_h {
+struct rte_pon_bwmap_h {
     uint16_t alloc_id:14;       // The allocation ID field contains the 14-bit number that indicates the recipient of the bandwidth allocation
     uint8_t dbru:1;             /* If this bit is set, the ONU should send the DBRu report for the given Alloc-ID. 
                                     If the bit is not set, the DBRu report is not transmitted.
@@ -99,23 +99,18 @@ struct rte_volt_bwmap_h {
 } __rte_packed;
 
 // custom ethernet header (22 bytes)
-struct rte_volt_ethernet_h {
+struct rte_pon_ethernet_h {
     uint64_t dstaddr:48;
     uint64_t srcaddr:48;
     uint32_t vlan_tag;
     uint16_t ether_type;
 } __rte_packed;
 
-void pktgen_volt_hdr_ctor(pkt_seq_t *pkt __rte_unused, void *hdr);
+void pktgen_pon_hdr_ctor(pkt_seq_t *pkt __rte_unused, void *hdr);
 
 
 #ifdef __cplusplus
 }
 #endif
 
-// pktgen_volt_ctor(pkt_seq_t *pkt, void *hdr);
-
-// pktgen_packet_insert_dbru(port_info_t *info, uint16_t qid);
-
-
-#endif  /*  _PKTGEN_VOLT_H_ */
+#endif  /*  _PKTGEN_PON_H_ */

@@ -31,7 +31,7 @@
 #include "pktgen-gtpu.h"
 #include "pktgen-cfg.h"
 #include "pktgen-rate.h"
-#include "pktgen-volt.h"
+#include "pktgen-pon.h"
 
 #include <pthread.h>
 #include <sched.h>
@@ -219,12 +219,12 @@ pktgen_tstamp_pointer(port_info_t *info, struct rte_mbuf *m, int32_t seq_idx)
 
 	p += sizeof(struct pg_ether_hdr);
 
-	if (info->seq_pkt[seq_idx].ethType == RTE_ETHER_TYPE_VOLT_US_FIRST || 
-		info->seq_pkt[seq_idx].ethType == RTE_ETHER_TYPE_VOLT_US_LAST) {
-		p += sizeof(struct rte_volt_us_ether_hdr);
-		p += sizeof(struct rte_volt_dbru_hdr);
-		p += sizeof(struct rte_volt_xgem_h);
-		p += sizeof(struct rte_volt_ethernet_h);
+	if (info->seq_pkt[seq_idx].ethType == RTE_ETHER_TYPE_PON_US_FIRST || 
+		info->seq_pkt[seq_idx].ethType == RTE_ETHER_TYPE_PON_US_LAST) {
+		p += sizeof(struct rte_pon_us_ether_hdr);
+		p += sizeof(struct rte_pon_dbru_hdr);
+		p += sizeof(struct rte_pon_xgem_h);
+		p += sizeof(struct rte_pon_ethernet_h);
 		p += sizeof(struct pg_vlan_hdr);
 		p += sizeof(struct pg_ipv4_hdr);
 		p += sizeof(struct pg_udp_hdr);
@@ -279,7 +279,7 @@ pktgen_dbru_pointer(struct rte_mbuf *m)
 
 	p += sizeof(struct pg_ether_hdr);
 
-	p += sizeof(struct rte_volt_us_ether_hdr);
+	p += sizeof(struct rte_pon_us_ether_hdr);
 
 	RTE_PTR_ALIGN_CEIL(p, sizeof(uint64_t));
 
@@ -293,15 +293,14 @@ pktgen_dbru_apply(struct rte_mbuf **mbufs, int cnt)
 {
 	uint64_t diff_tsc;
 	/* "generic formula" to convert µs to cycles */
-	const uint64_t tx_volt_dbru_cycle = (rte_get_tsc_hz() + US_PER_S - 1) / US_PER_S * 125;
-	// const uint64_t tx_volt_dbru_cycle = (rte_get_tsc_hz() + US_PER_S - 1) / US_PER_S / 2;
+	const uint64_t tx_pon_dbru_cycle = (rte_get_tsc_hz() + US_PER_S - 1) / US_PER_S * 125;
 	int i;
 
 	for (i = 0; i < cnt; i++) {
 		pktgen.curr_tsc = rte_rdtsc();
 		diff_tsc = pktgen.curr_tsc - pktgen.prev_tsc;
 		/* insert a DBRu every ~125µs (155,520 bytes = 38,880 words =~ 17.28 pkts (9000 mtu)) */
-		if (unlikely(diff_tsc > tx_volt_dbru_cycle)) {
+		if (unlikely(diff_tsc > tx_pon_dbru_cycle)) {
 			dbru_t *dbru;
 			dbru = pktgen_dbru_pointer(mbufs[i]);
 			dbru->buff_occ = 0x555555;
@@ -309,12 +308,11 @@ pktgen_dbru_apply(struct rte_mbuf **mbufs, int cnt)
 			// dbru->tsc1 = htobe64(diff_tsc);
 			// dbru->tsc2 = htobe64(pktgen.curr_tsc);
 			// dbru->tsc3 = htobe64(pktgen.prev_tsc);
-			// dbru->tsc4 = htobe64(tx_volt_dbru_cycle);
+			// dbru->tsc4 = htobe64(tx_pon_dbru_cycle);
 
-			// pktgen.prev_tsc = pktgen.curr_tsc;
 			pktgen.prev_tsc = pktgen.curr_tsc;
 		}
-    	// pktgen_log_info("curr_tsc, prev_tsc, dbru_cycle: %llu, %llu, %llu", pktgen.curr_tsc, pktgen.prev_tsc, tx_volt_dbru_cycle);
+    	// pktgen_log_info("curr_tsc, prev_tsc, dbru_cycle: %llu, %llu, %llu", pktgen.curr_tsc, pktgen.prev_tsc, tx_pon_dbru_cycle);
 	}
 }
 
@@ -368,7 +366,7 @@ pktgen_send_burst(port_info_t *info, uint16_t qid)
 	tap = pktgen_tst_port_flags(info, PROCESS_TX_TAP_PKTS);
 	rnd = pktgen_tst_port_flags(info, SEND_RANDOM_PKTS);
 	tstamp = pktgen_tst_port_flags(info, (SEND_LATENCY_PKTS | SEND_RATE_PACKETS));
-	dbru = 1; // TODO: set a flag to enable/disable DBRus generation
+	dbru = 1; // TODO: set a port flag to enable/disable DBRus generation
 
 	qstats = &info->qstats[qid];
 	qstats->txpkts += cnt;
@@ -674,8 +672,8 @@ pktgen_packet_ctor(port_info_t *info, int32_t seq_idx, int32_t type)
 		pg_ether_addr_copy(&pkt->eth_dst_addr,
 		                (struct pg_ether_addr *)&arp->arp_data.arp_tha);
 		*((uint32_t *)&arp->arp_data.arp_tip) = htonl(pkt->ip_dst_addr.addr.ipv4.s_addr);
-	} else if (pkt->ethType == RTE_ETHER_TYPE_VOLT_US_FIRST || pkt->ethType == RTE_ETHER_TYPE_VOLT_US_LAST) {
-		pktgen_volt_hdr_ctor(pkt, l3_hdr);
+	} else if (pkt->ethType == RTE_ETHER_TYPE_PON_US_FIRST || pkt->ethType == RTE_ETHER_TYPE_PON_US_LAST) {
+		pktgen_pon_hdr_ctor(pkt, l3_hdr);
 	} else {
 		pktgen_log_error("Unknown EtherType 0x%04x", pkt->ethType);
 	}
@@ -964,9 +962,9 @@ pktgen_setup_cb(struct rte_mempool *mp,
 	if (idx == RANGE_PKT)
 		pktgen_range_ctor(&info->range, pkt);
 
-	if (pkt->ethType == RTE_ETHER_TYPE_VOLT_US_FIRST || RTE_ETHER_TYPE_VOLT_US_LAST) {
-		pkt->ethType = (pktgen.counter & 1 ? RTE_ETHER_TYPE_VOLT_US_LAST :  RTE_ETHER_TYPE_VOLT_US_FIRST);
-		pkt->pktSize = RTE_PTKSIZE_NORM(pkt->ethType);
+	if (pkt->ethType == RTE_ETHER_TYPE_PON_US_FIRST || RTE_ETHER_TYPE_PON_US_LAST) {
+		pkt->ethType = (pktgen.counter & 1 ? RTE_ETHER_TYPE_PON_US_LAST :  RTE_ETHER_TYPE_PON_US_FIRST);
+		pkt->pktSize = RTE_PON_PTKSIZE_NORM(pkt->ethType);
 		pktgen.counter++;
 	}
 

@@ -224,8 +224,8 @@ rate_print_static_data(void)
 		         (pkt->ethType == PG_ETHER_TYPE_IPv4) ? "IPv4" :
 		         	(pkt->ethType == PG_ETHER_TYPE_IPv6) ? "IPv6" :
 		         		(pkt->ethType == PG_ETHER_TYPE_ARP) ? "ARP" : 
-						 	(pkt->ethType == RTE_ETHER_TYPE_VOLT_US_FIRST) ? "vOLT" : 
-							 	(pkt->ethType == RTE_ETHER_TYPE_VOLT_US_LAST) ? "vOLT" : "Other",
+						 	(pkt->ethType == RTE_ETHER_TYPE_PON_US_FIRST) ? "vONU" : 
+							 	(pkt->ethType == RTE_ETHER_TYPE_PON_US_LAST) ? "vONU" : "Other",
 		         (pkt->ipProto == PG_IPPROTO_TCP) ? "TCP" :
 		         	(pkt->ipProto == PG_IPPROTO_ICMP) ? "ICMP" : "UDP");
 		scrn_printf(row++, col, "%*s", COLUMN_WIDTH_1, buff);

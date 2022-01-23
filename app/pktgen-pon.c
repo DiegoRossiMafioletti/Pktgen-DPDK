@@ -13,11 +13,11 @@
 
 #include "pktgen.h"
 #include "pktgen-log.h"
-#include "pktgen-volt.h"
+#include "pktgen-pon.h"
 
 /**************************************************************************//**
  *
- * pktgen_volt_ctor - Construct the VOLT header for a packet
+ * pktgen_pon_ctor - Construct the PON header for a packet
  *
  * DESCRIPTION
  * Constructor for the XGEM header for a given packet.
@@ -28,17 +28,16 @@
  */
 
 void
-pktgen_volt_hdr_ctor(pkt_seq_t *pkt __rte_unused, void *hdr)
+pktgen_pon_hdr_ctor(pkt_seq_t *pkt __rte_unused, void *hdr)
 {
-	struct rte_volt_us_ether_hdr *volt = hdr;
+	struct rte_pon_us_ether_hdr *pon = hdr;
 	uint8_t i;
 
-	// volt->out_chunck_len = htons(pkt->ethType);
-	volt->burst_id = 0;
-	volt->burst_seq = 1;
-	volt->flags = 0x02;
-	volt->padding = 0x00000000;
+	pon->burst_id = 0;
+	pon->burst_seq = 1;
+	pon->flags = 0x02;
+	pon->padding = 0x00000000;
 	for (i = 0; i < 48; i++) {
-		volt->ploamu[i] = 0x44;
+		pon->ploamu[i] = 0x44;
 	}
 }
