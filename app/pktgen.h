@@ -301,6 +301,7 @@ typedef struct pktgen_s {
 
 	uint64_t curr_tsc;	/* Current TSC */
 	uint64_t prev_tsc;
+	uint16_t xgem_port_id;
 
 
 	int (*callout)(void *callout_arg);
@@ -413,6 +414,15 @@ typedef struct {
     uint32_t buff_occ:24;
     uint8_t crc;
 } dbru_t;
+
+typedef struct {
+    uint16_t pli:14;
+    uint8_t index:2;
+    uint16_t port_id;
+    uint32_t options:18;
+    uint8_t lf:1;
+    uint16_t hec:13;
+} xgem_t;
 
 #define TSTAMP_MAGIC   (('T' << 8) + 's')
 

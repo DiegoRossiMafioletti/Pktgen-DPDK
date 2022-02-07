@@ -276,13 +276,9 @@ pktgen_dbru_pointer(struct rte_mbuf *m)
 	char *p;
 
 	p = rte_pktmbuf_mtod(m, char *);
-
 	p += sizeof(struct pg_ether_hdr);
-
 	p += sizeof(struct rte_pon_us_ether_hdr);
-
 	RTE_PTR_ALIGN_CEIL(p, sizeof(uint64_t));
-
 	dbru = (dbru_t *)p;
 
 	return dbru;
@@ -313,6 +309,37 @@ pktgen_dbru_apply(struct rte_mbuf **mbufs, int cnt)
 			pktgen.prev_tsc = pktgen.curr_tsc;
 		}
     	// pktgen_log_info("curr_tsc, prev_tsc, dbru_cycle: %llu, %llu, %llu", pktgen.curr_tsc, pktgen.prev_tsc, tx_pon_dbru_cycle);
+	}
+}
+
+static __inline__ xgem_t *
+pktgen_xgem_pointer(struct rte_mbuf *m)
+{
+	xgem_t *xgem;
+	char *p;
+
+	p = rte_pktmbuf_mtod(m, char *);
+	p += sizeof(struct pg_ether_hdr);
+	p += sizeof(struct rte_pon_us_ether_hdr);
+	p += sizeof(struct rte_pon_dbru_hdr);
+	RTE_PTR_ALIGN_CEIL(p, sizeof(uint64_t));
+	xgem = (xgem_t *)p;
+
+	return xgem;
+}
+
+static inline void
+pktgen_xgem_apply(struct rte_mbuf **mbufs, int cnt)
+{
+	int i;
+	for (i = 0; i < cnt; i++) {
+		xgem_t *xgem;
+		xgem = pktgen_xgem_pointer(mbufs[i]);
+		xgem->port_id = rte_cpu_to_be_16(pktgen.xgem_port_id);
+		pktgen.xgem_port_id++;
+		if (pktgen.xgem_port_id > 15) {
+			pktgen.xgem_port_id = 0;
+		}
 	}
 }
 
@@ -383,6 +410,7 @@ pktgen_send_burst(port_info_t *info, uint16_t qid)
 
 		if (dbru) {
 			pktgen_dbru_apply(pkts, cnt);
+			pktgen_xgem_apply(pkts, cnt);
 		}
 		ret = rte_eth_tx_burst(info->pid, qid, pkts, cnt);
 
@@ -1129,6 +1157,8 @@ pktgen_main_transmit(port_info_t *info, uint16_t qid)
 	uint32_t flags;
 
 	flags = rte_atomic32_read(&info->port_flags);
+
+	pktgen.xgem_port_id = 0;
 
 	/*
 	 * Transmit ARP/Ping packets if needed
