@@ -1158,8 +1158,6 @@ pktgen_main_transmit(port_info_t *info, uint16_t qid)
 
 	flags = rte_atomic32_read(&info->port_flags);
 
-	pktgen.xgem_port_id = 0;
-
 	/*
 	 * Transmit ARP/Ping packets if needed
 	 */
@@ -1312,6 +1310,8 @@ pktgen_main_rxtx_loop(uint8_t lid)
 	uint64_t curr_tsc;
 	uint64_t tx_next_cycle;	/**< Next cycle to send a burst of traffic */
 	uint64_t tx_bond_cycle;
+
+	pktgen.xgem_port_id = 0;
 
 	memset(infos, '\0', sizeof(infos));
 	memset(qids, '\0', sizeof(qids));
