@@ -443,9 +443,9 @@ pktgen_recv_tstamp(port_info_t *info, struct rte_mbuf **pkts, uint16_t nb_pkts)
 		int i;
 		uint64_t lat, jitter;
 		uint64_t avg_lat, avg_hw_lat, avg_snic_lat, ticks;
+		tstamp_t *tstamp;
 
 		for (i = 0; i < nb_pkts; i++) {
-			tstamp_t *tstamp;
 			tstamp = pktgen_tstamp_pointer(info, pkts[i], seq_idx);
 
 			if (tstamp->magic == TSTAMP_MAGIC || tstamp->magic == SNIC_MAGIC) {
