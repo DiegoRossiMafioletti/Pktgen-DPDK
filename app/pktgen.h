@@ -301,6 +301,9 @@ typedef struct pktgen_s {
 
 	uint64_t curr_tsc;	/* Current TSC */
 	uint64_t prev_tsc;
+
+	uint64_t log_prev_tsc;
+	uint32_t log_cnt;
 	uint16_t xgem_port_id;
 
 
@@ -425,6 +428,7 @@ typedef struct {
 } xgem_t;
 
 #define TSTAMP_MAGIC   (('T' << 8) + 's')
+#define SNIC_MAGIC	   (('S' << 8) + 's')
 
 static __inline__ void
 pktgen_set_port_flags(port_info_t *info, uint32_t flags) {

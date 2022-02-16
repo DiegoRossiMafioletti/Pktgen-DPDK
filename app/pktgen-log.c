@@ -319,13 +319,13 @@ pktgen_format_msg_file(const log_msg_t *log_msg)
 	file = strdup(log_msg->file);
 
 	snprintf(msg, sizeof(msg), "%s %s.%03ld [%s:%ld(%s)] %s",
-		 (log_msg->level == LOG_LEVEL_TRACE)   ? "tt"
-		 : (log_msg->level == LOG_LEVEL_DEBUG)   ? "dd"
-		 : (log_msg->level == LOG_LEVEL_INFO)    ? "II"
-		 : (log_msg->level == LOG_LEVEL_WARNING) ? "WW"
-		 : (log_msg->level == LOG_LEVEL_ERROR)   ? "EE"
-		 : (log_msg->level == LOG_LEVEL_PANIC)   ? "PP"
-		 : "??",
+		 (log_msg->level == LOG_LEVEL_TRACE)   ? "#tt"
+		 : (log_msg->level == LOG_LEVEL_DEBUG)   ? "#dd"
+		 : (log_msg->level == LOG_LEVEL_INFO)    ? "#II"
+		 : (log_msg->level == LOG_LEVEL_WARNING) ? "#WW"
+		 : (log_msg->level == LOG_LEVEL_ERROR)   ? "#EE"
+		 : (log_msg->level == LOG_LEVEL_PANIC)   ? "#PP"
+		 : "#??",
 		 timestamp, log_msg->tv.tv_usec / 1000,
 		 basename(file), log_msg->line, log_msg->func, log_msg->msg);
 

@@ -427,6 +427,8 @@ pktgen_recv_tstamp(port_info_t *info, struct rte_mbuf **pkts, uint16_t nb_pkts)
 {
 	uint32_t flags;
 	int32_t seq_idx;
+	const uint64_t log_write_cycle = (rte_get_tsc_hz() + US_PER_S - 1);
+	uint64_t diff_tsc;
 
 	flags = rte_atomic32_read(&info->port_flags);
 
@@ -440,12 +442,13 @@ pktgen_recv_tstamp(port_info_t *info, struct rte_mbuf **pkts, uint16_t nb_pkts)
 	if (flags & (SEND_LATENCY_PKTS | SEND_RATE_PACKETS)) {
 		int i;
 		uint64_t lat, jitter;
+		uint64_t avg_lat, avg_hw_lat, avg_snic_lat, ticks;
 
 		for (i = 0; i < nb_pkts; i++) {
 			tstamp_t *tstamp;
 			tstamp = pktgen_tstamp_pointer(info, pkts[i], seq_idx);
 
-			if (tstamp->magic == TSTAMP_MAGIC) {
+			if (tstamp->magic == TSTAMP_MAGIC || tstamp->magic == SNIC_MAGIC) {
 				lat = (rte_rdtsc_precise() - tstamp->timestamp);
 				info->avg_latency += lat;
 				if (lat > info->prev_latency)
@@ -461,6 +464,36 @@ pktgen_recv_tstamp(port_info_t *info, struct rte_mbuf **pkts, uint16_t nb_pkts)
 				info->magic_errors++;
 		}
 		info->latency_nb_pkts += nb_pkts;
+		
+		/* print data to a logfile to plot a chart */
+		ticks = rte_get_timer_hz() / 1000000;
+		avg_lat = 0;
+		avg_hw_lat = 0;
+		avg_snic_lat = 0;
+		if (info->latency_nb_pkts) {
+			avg_lat = (info->avg_latency / info->latency_nb_pkts) / ticks;
+			if (avg_lat > info->max_avg_latency)
+				info->max_avg_latency = avg_lat;
+			if (info->min_avg_latency == 0)
+				info->min_avg_latency = avg_lat;
+			else if (avg_lat < info->min_avg_latency)
+				info->min_avg_latency = avg_lat;
+		}
+		diff_tsc = rte_rdtsc() - pktgen.log_prev_tsc;
+
+		if (tstamp->magic == SNIC_MAGIC) {
+			avg_hw_lat = avg_lat;
+			avg_lat = 0;
+		}
+
+		if (unlikely(diff_tsc > log_write_cycle)) {
+			if (pktgen.log_cnt == 0) {
+				pktgen_log_info("Header:\nx_value;sw_latency;hw_latency;snic_latency");
+			}
+			pktgen_log_info("Latency:\n%d;%"PRIu64";"PRIu64";"PRIu64, pktgen.log_cnt, avg_lat, avg_hw_lat, avg_snic_lat);
+			pktgen.log_prev_tsc = rte_rdtsc();
+			pktgen.log_cnt++;
+		}
 	}
 }
 
