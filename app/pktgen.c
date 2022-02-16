@@ -481,18 +481,18 @@ pktgen_recv_tstamp(port_info_t *info, struct rte_mbuf **pkts, uint16_t nb_pkts)
 		}
 		diff_tsc = rte_rdtsc() - pktgen.log_prev_tsc;
 
-		if (tstamp->magic == SNIC_MAGIC) {
-			avg_hw_lat = avg_lat;
-			avg_lat = 0;
-		}
-
 		if (unlikely(diff_tsc > log_write_cycle)) {
-			if (pktgen.log_cnt == 0) {
+			if (pktgen.log_cnt != 0) {
+				if (tstamp->magic == SNIC_MAGIC) {
+					avg_hw_lat = avg_lat;
+					avg_lat = 0;
+				}
+				pktgen_log_info("Latency:\n%d;%"PRIu64";%"PRIu64";%"PRIu64, pktgen.log_cnt, avg_lat, avg_hw_lat, avg_snic_lat);
+				pktgen.log_prev_tsc = rte_rdtsc();
+				pktgen.log_cnt++;
+			} else {
 				pktgen_log_info("Header:\nx_value;sw_latency;hw_latency;snic_latency");
 			}
-			pktgen_log_info("Latency:\n%d;%"PRIu64";"PRIu64";"PRIu64, pktgen.log_cnt, avg_lat, avg_hw_lat, avg_snic_lat);
-			pktgen.log_prev_tsc = rte_rdtsc();
-			pktgen.log_cnt++;
 		}
 	}
 }
