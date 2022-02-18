@@ -494,6 +494,7 @@ pktgen_recv_tstamp(port_info_t *info, struct rte_mbuf **pkts, uint16_t nb_pkts)
 			pktgen.log_prev_tsc = rte_rdtsc();
 			pktgen.log_cnt++;
 		}
+
 	}
 }
 
