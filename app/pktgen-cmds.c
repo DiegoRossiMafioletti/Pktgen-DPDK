@@ -1540,6 +1540,7 @@ pktgen_stop_transmitting(port_info_t *info)
 	if (pktgen_tst_port_flags(info, SENDING_PACKETS)) {
 		pktgen_clr_port_flags(info, (SENDING_PACKETS | SEND_FOREVER));
 		pktgen.counter = 0;		// reset the debug counter
+		info->dbru_session = 0;
 		for (q = 0; q < get_port_txcnt(pktgen.l2p, info->pid); q++)
 			pktgen_set_q_flags(info, q, DO_TX_FLUSH);
 	}
