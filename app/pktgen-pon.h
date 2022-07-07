@@ -17,6 +17,10 @@ extern "C" {
 #define RTE_ETHER_TYPE_PON_US_FIRST     0x1f44
 #define RTE_ETHER_TYPE_PON_US_LAST      0x1b94
 
+#define BWMAP_ALLOC_STRUCT_COUNT 8
+
+#define MAX_DBRU_SESSIONS   (1<<12)
+
 #define RTE_PON_PTKSIZE_NORM(_size) (_size+14)     // adds 14 bytes to the packet size
 
 struct rte_pon_us_ether_hdr {
@@ -69,7 +73,7 @@ struct rte_pon_hlend_h {
 } __rte_packed;
 
 
-struct rte_pon_bwmap_h {
+struct rte_pon_bwmap_alloc_structure_h {
     uint16_t alloc_id:14;       // The allocation ID field contains the 14-bit number that indicates the recipient of the bandwidth allocation
     uint8_t dbru:1;             /* If this bit is set, the ONU should send the DBRu report for the given Alloc-ID. 
                                     If the bit is not set, the DBRu report is not transmitted.
@@ -98,6 +102,7 @@ struct rte_pon_bwmap_h {
     uint16_t hec:13;
 } __rte_packed;
 
+
 // custom ethernet header (22 bytes)
 struct rte_pon_ethernet_h {
     uint64_t dstaddr:48;
@@ -105,6 +110,12 @@ struct rte_pon_ethernet_h {
     uint32_t vlan_tag;
     uint16_t ether_type;
 } __rte_packed;
+
+struct rte_timestamp_h {
+	uint64_t timestamp;
+	uint16_t magic;
+} __rte_packed;
+
 
 void pktgen_pon_hdr_ctor(pkt_seq_t *pkt __rte_unused, void *hdr);
 
