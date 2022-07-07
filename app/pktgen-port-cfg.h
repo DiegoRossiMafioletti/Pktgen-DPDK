@@ -46,6 +46,35 @@ typedef struct port_sizes_s {
     uint64_t unknown;    /**< Number of unknown sizes */
 } port_sizes_t;
 
+typedef struct bwmap_alloc_structure_s {
+uint16_t alloc_id:14;       // The allocation ID field contains the 14-bit number that indicates the recipient of the bandwidth allocation
+    uint8_t dbru:1;             /* If this bit is set, the ONU should send the DBRu report for the given Alloc-ID. 
+                                    If the bit is not set, the DBRu report is not transmitted.
+                                */
+    uint8_t ploamu:1;
+    uint16_t start_time;        /* The StartTime field contains a 16-bit number that indicates the location of the first byte of the 
+                                    upstream XGTC burst within the upstream PHY frame. StartTime is measured from the beginning of the 
+                                    upstream PHY frame and has a granularity of 1 word (4 bytes). 
+                                    The value of StartTime = 0 corresponds to the first word of the upstream PHY frame; the value of 
+                                    StartTime = 9719 corresponds to the last word of the upstream PHY frame.
+                                */
+    uint16_t grant_size;        /* The GrantSize field contains the 16-bit number that indicates the combined length of the XGTC payload 
+                                    data with DBRu overhead transmitted within the given allocation. (Notably, GrantSize does not include 
+                                    XGTC header, XGTC trailer, or FEC overhead.) GrantSize has the granularity of 1 word (4 bytes). The 
+                                    value of GrantSize is equal to zero for the PLOAM-only grants, including serial number grants and 
+                                    ranging grants used in the process of ONU activation. The minimum possible non-zero value of GrantSize 
+                                    is 1, which corresponds to as single word (4 byte) allocation for a DBRu-only transmission. The minimum
+                                    allocation for XGTC payload proper (DBRu flag not set) is 4 words (16 bytes), in which case GrantSize = 4.
+                                */
+    uint8_t fwi:1;              /* When addressing an ONU that supports the protocol-based power management, the OLT sets the FWI bit to 
+                                    expedite waking up an ONU that has been in a low power mode.
+                                */
+    uint8_t burst_profile:2;    /* The BurstProfile field is a 2-bit field that contains the index of the burst profile to be used by the 
+                                    PHY adaptation sublayer of the ONU to form the PHY burst
+                                */
+    uint16_t hec:13;
+} bwmap_alloc_structure_t;
+
 struct mbuf_table {
     uint16_t len;
     struct rte_mbuf *m_table[DEFAULT_PKT_BURST];
@@ -231,6 +260,10 @@ typedef struct port_info_s {
     uint64_t jitter_count;
     uint64_t prev_latency;
     uint64_t max_latency;
+
+    uint32_t dbru_session:24;	/* current dbru session */
+    
+    bwmap_alloc_structure_t alloc_struct;    /* alloc_struct information */
 
     pkt_stats_t stats;  /**< Statistics for a number of stats */
     port_sizes_t sizes; /**< Stats for the different packets sizes */
