@@ -419,6 +419,13 @@ typedef struct {
 } dbru_t;
 
 typedef struct {
+    uint16_t bwmap_length:11;
+    uint8_t ploam_count;
+    uint16_t hec:13;
+    struct rte_pon_bwmap_alloc_structure_h alloc_struct[BWMAP_ALLOC_STRUCT_COUNT];
+} hlend_t;
+
+typedef struct {
     uint16_t pli:14;
     uint8_t index:2;
     uint16_t port_id;
