@@ -66,6 +66,9 @@ pktgen_print_static_data(void)
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "Total Rx pkts");
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "Jitter percent");
 
+	row++;
+	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "DBRu session");
+
 	/* Labels for static fields */
 	pktgen_display_set_color("stats.stat.label");
 	ip_row = ++row;
@@ -288,6 +291,7 @@ pktgen_page_latency(void)
 			info->latency_nb_pkts = 0;
 			info->avg_latency     = 0;
 		}
+		
 		snprintf(buff, sizeof(buff), "%" PRIu64, avg_lat);
 		scrn_printf(row++, col, "%*s", COLUMN_WIDTH_1, buff);
 
@@ -308,6 +312,20 @@ pktgen_page_latency(void)
 			snprintf(buff, sizeof(buff), "%" PRIu64, avg_lat);
 
 		scrn_printf(row++, col, "%*s", COLUMN_WIDTH_1, buff);
+
+		/* DBRu session */
+		row++;
+		// if (info->dbru_session >= MAX_DBRU_SESSIONS) {
+			snprintf(buff, sizeof(buff), "%d", info->dbru_session);
+		// } else {
+			// snprintf(buff, sizeof(buff), "%d", info->dbru_session >> 12);
+		// }
+		scrn_printf(row++, col, "%*s", COLUMN_WIDTH_1, buff);
+
+		/* BWMAPs */
+		// row++;
+		// snprintf(buff, sizeof(buff), "%d/%d", pktgen.);
+		// scrn_printf(row++, col, "%*s", COLUMN_WIDTH_1, buff);
 
 		display_cnt++;
 	}
