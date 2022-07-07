@@ -284,8 +284,34 @@ pktgen_dbru_pointer(struct rte_mbuf *m)
 	return dbru;
 }
 
+static __inline__ hlend_t *
+l2fwd_hlend_pointer(struct rte_mbuf *m) 
+{
+	hlend_t *hlend;
+	char *p;
+
+	/* starting the pointer after the upstream header + TS */
+	p = rte_pktmbuf_mtod(m, char *);
+	p += sizeof(struct rte_ether_hdr);
+	p += sizeof(struct rte_pon_us_ether_hdr);
+	p += sizeof(struct rte_pon_dbru_hdr);
+	p += sizeof(struct rte_pon_xgem_h);
+	p += sizeof(struct rte_pon_ethernet_h);
+	p += sizeof(struct rte_vlan_hdr);
+	p += sizeof(struct rte_ipv4_hdr);	// hw ts is here!
+	p += sizeof(struct rte_udp_hdr);
+	p += sizeof(struct rte_timestamp_h);
+
+	// RTE_PTR_ALIGN_CEIL(p, sizeof(uint64_t));
+
+	hlend = (hlend_t *)p;
+	return hlend;
+}
+
+
 static inline void
-pktgen_dbru_apply(struct rte_mbuf **mbufs, int cnt)
+pktgen_dbru_apply(port_info_t *info __rte_unused,
+					struct rte_mbuf **mbufs, int cnt)
 {
 	uint64_t diff_tsc;
 	/* "generic formula" to convert µs to cycles */
@@ -299,7 +325,10 @@ pktgen_dbru_apply(struct rte_mbuf **mbufs, int cnt)
 		if (unlikely(diff_tsc > tx_pon_dbru_cycle)) {
 			dbru_t *dbru;
 			dbru = pktgen_dbru_pointer(mbufs[i]);
-			dbru->buff_occ = 0x555555;
+			// dbru->buff_occ = 0x555555;
+			dbru->buff_occ = info->dbru_session++;
+			if (info->dbru_session >= MAX_DBRU_SESSIONS)
+				info->dbru_session = 0;
 			dbru->crc = 0x55;
 			// dbru->tsc1 = htobe64(diff_tsc);
 			// dbru->tsc2 = htobe64(pktgen.curr_tsc);
@@ -409,7 +438,7 @@ pktgen_send_burst(port_info_t *info, uint16_t qid)
 			pktgen_tstamp_apply(info, pkts, cnt, seq_idx);
 
 		if (dbru) {
-			pktgen_dbru_apply(pkts, cnt);
+			pktgen_dbru_apply(info, pkts, cnt);
 			pktgen_xgem_apply(pkts, cnt);
 		}
 		ret = rte_eth_tx_burst(info->pid, qid, pkts, cnt);
@@ -444,6 +473,7 @@ pktgen_recv_tstamp(port_info_t *info, struct rte_mbuf **pkts, uint16_t nb_pkts)
 		uint64_t lat, jitter;
 		uint64_t avg_lat, avg_hw_lat, avg_snic_lat, ticks;
 		tstamp_t *tstamp;
+		dbru_t *dbru;
 
 		for (i = 0; i < nb_pkts; i++) {
 			tstamp = pktgen_tstamp_pointer(info, pkts[i], seq_idx);
@@ -462,8 +492,15 @@ pktgen_recv_tstamp(port_info_t *info, struct rte_mbuf **pkts, uint16_t nb_pkts)
 				info->prev_latency = lat;
 			} else
 				info->magic_errors++;
+
+			/* get back DBRus */
+			dbru = pktgen_dbru_pointer(pkts[i]);
+			if(dbru->crc == 0x55) {
+				info->dbru_session = dbru->buff_occ;
+			}
 		}
 		info->latency_nb_pkts += nb_pkts;
+
 		
 		/* print data to a logfile to plot a chart */
 		ticks = rte_get_timer_hz() / 1000000;
@@ -486,6 +523,7 @@ pktgen_recv_tstamp(port_info_t *info, struct rte_mbuf **pkts, uint16_t nb_pkts)
 			avg_hw_lat = avg_lat;
 			avg_lat = 0;
 		}
+		/* log data to a file, using csv format */
 		if (unlikely(diff_tsc > log_write_cycle)) {
 			if (pktgen.log_cnt == 0) {
 				pktgen_log_info("Header:\nx_value;sw_latency;hw_latency;snic_latency");
@@ -1024,6 +1062,7 @@ pktgen_setup_cb(struct rte_mempool *mp,
 	if (idx == RANGE_PKT)
 		pktgen_range_ctor(&info->range, pkt);
 
+	/* change PON chunk size */
 	if (pkt->ethType == RTE_ETHER_TYPE_PON_US_FIRST || RTE_ETHER_TYPE_PON_US_LAST) {
 		pkt->ethType = (pktgen.counter & 1 ? RTE_ETHER_TYPE_PON_US_LAST :  RTE_ETHER_TYPE_PON_US_FIRST);
 		pkt->pktSize = RTE_PON_PTKSIZE_NORM(pkt->ethType);
