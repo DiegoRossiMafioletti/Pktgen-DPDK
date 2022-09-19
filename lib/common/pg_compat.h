@@ -19,7 +19,9 @@
 extern "C" {
 #endif
 
-#define PG_JUMBO_FRAME_LEN	(9600 + RTE_ETHER_CRC_LEN + RTE_ETHER_HDR_LEN)
+// #define PG_JUMBO_FRAME_LEN	(9600 + RTE_ETHER_CRC_LEN + RTE_ETHER_HDR_LEN)
+// Netronome nfp driver supports a maximum of 9216-byte size (9216 - CRC_LEN - HDR_LEN = 9198)
+#define PG_JUMBO_FRAME_LEN	(9198 + RTE_ETHER_CRC_LEN + RTE_ETHER_HDR_LEN)
 
 #ifndef RTE_JUMBO_ETHER_MTU
 #define RTE_JUMBO_ETHER_MTU       \
